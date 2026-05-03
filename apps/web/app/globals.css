@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --surface: #f9fafb;
+  --surface-elevated: #ffffff;
+  --border-primary: #e5e7eb;
+  --text-muted: #6b7280;
+}
+
+.dark {
+  --background: #000000;
+  --foreground: #f5f5f5;
+  --surface: #080808;
+  --surface-elevated: #0f0f0f;
+  --border-primary: #1c1c1c;
+  --text-muted: #a3a3a3;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border-primary: var(--border-primary);
+  --color-text-muted: var(--text-muted);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.3);
+  color: inherit;
+}
+.dark ::selection {
+  background: rgba(96, 165, 250, 0.3);
+  color: inherit;
+}
+
+/* Dark overrides — remap Tailwind blue-grays to neutral blacks */
+.dark {
+  --color-gray-50:  #fafafa;
+  --color-gray-100: #f5f5f5;
+  --color-gray-200: #e5e5e5;
+  --color-gray-300: #d4d4d4;
+  --color-gray-400: #a3a3a3;
+  --color-gray-500: #737373;
+  --color-gray-600: #525252;
+  --color-gray-700: #1c1c1c;
+  --color-gray-800: #111111;
+  --color-gray-900: #080808;
+  --color-gray-950: #000000;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  color-scheme: dark;
+}
+
+/* Custom select chevron — moves the arrow slightly left from the edge */
+select.select-chevron {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.625rem center;
+  background-size: 14px 14px;
+  padding-right: 2rem;
+}
+
+/* Hide scrollbar but keep scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* All interactive elements should show pointer cursor */
+@layer base {
+  select,
+  button,
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"],
+  label {
+    cursor: pointer;
+  }
+}

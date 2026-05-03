@@ -1,0 +1,416 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model functions {
+  id         String      @id(map: "rms_functions_pkey") @default(uuid())
+  name       String      @unique(map: "rms_functions_name_key")
+  created_at DateTime    @default(now())
+  employees  employees[]
+  roles      roles[]
+
+  @@map("functions")
+}
+
+model roles {
+  id          String      @id(map: "rms_roles_pkey") @default(uuid())
+  name        String
+  function_id String
+  created_at  DateTime    @default(now())
+  employees   employees[]
+  function    functions   @relation(fields: [function_id], references: [id], map: "rms_roles_function_id_fkey")
+
+  @@unique([name, function_id], map: "rms_roles_name_function_id_key")
+  @@index([function_id], map: "rms_roles_function_id_idx")
+  @@map("roles")
+}
+
+model skills {
+  id              String            @id(map: "rms_skills_pkey") @default(uuid())
+  name            String            @unique(map: "rms_skills_name_key")
+  platform_id     String?
+  platform        platforms?        @relation(fields: [platform_id], references: [id], onDelete: SetNull, onUpdate: Cascade, map: "rms_skills_platform_id_fkey")
+  employee_skills employee_skills[]
+
+  @@index([platform_id], map: "rms_skills_platform_id_idx")
+  @@map("skills")
+}
+
+model platforms {
+  id                 String               @id(map: "rms_platforms_pkey") @default(uuid())
+  name               String               @unique(map: "rms_platforms_name_key")
+  employee_platforms employee_platforms[]
+  skills             skills[]
+
+  @@map("platforms")
+}
+
+model employees {
+  id                     String                       @id(map: "rms_employees_pkey") @default(uuid())
+  google_id              String                       @unique(map: "rms_employees_google_id_key")
+  email                  String                       @unique(map: "rms_employees_email_key")
+  name                   String
+  avatar_url             String?
+  joining_date           DateTime?
+  status                 EmployeeStatus               @default(ACTIVE)
+  function_id            String
+  role_id                String
+  system_role            SystemRole                   @default(EMPLOYEE)
+  pod_id                 String?
+  ems_employee_id        String?                      @unique(map: "rms_employees_ems_employee_id_key")
+  salary_ctc_cents       Int?
+  created_at             DateTime                     @default(now())
+  updated_at             DateTime                     @updatedAt
+  deleted_at             DateTime?
+  show_in_allocations    Boolean                      @default(true)
+  resignation_date       DateTime?
+  is_bench               Boolean                      @default(false)
+  platforms              employee_platforms[]
+  skills                 employee_skills[]
+  function               functions                    @relation(fields: [function_id], references: [id], map: "rms_employees_function_id_fkey")
+  pod                    pods?                        @relation("PodMembers", fields: [pod_id], references: [id], map: "rms_employees_pod_id_fkey")
+  role                   roles                        @relation(fields: [role_id], references: [id], map: "rms_employees_role_id_fkey")
+  led_pod                pods?                        @relation("PodLead")
+  allocations            rms_allocations[]
+  employee_compute_costs rms_employee_compute_costs[]
+  consulting_projects    rms_projects[]               @relation("GrowthConsultant")
+  poc_projects           rms_projects[]               @relation("PracticePOC")
+  managed_projects       rms_projects[]               @relation("ProjectManager")
+
+  @@index([function_id], map: "rms_employees_function_id_idx")
+  @@index([pod_id], map: "rms_employees_pod_id_idx")
+  @@index([status], map: "rms_employees_status_idx")
+  @@map("employees")
+}
+
+model employee_platforms {
+  id          String    @id(map: "rms_employee_platforms_pkey") @default(uuid())
+  employee_id String
+  platform_id String
+  employee    employees @relation(fields: [employee_id], references: [id], map: "rms_employee_platforms_employee_id_fkey")
+  platform    platforms @relation(fields: [platform_id], references: [id], map: "rms_employee_platforms_platform_id_fkey")
+
+  @@unique([employee_id, platform_id], map: "rms_employee_platforms_employee_id_platform_id_key")
+  @@map("employee_platforms")
+}
+
+model employee_skills {
+  id          String    @id(map: "rms_employee_skills_pkey") @default(uuid())
+  employee_id String
+  skill_id    String
+  level       Int
+  employee    employees @relation(fields: [employee_id], references: [id], map: "rms_employee_skills_employee_id_fkey")
+  skill       skills    @relation(fields: [skill_id], references: [id], map: "rms_employee_skills_skill_id_fkey")
+
+  @@unique([employee_id, skill_id], map: "rms_employee_skills_employee_id_skill_id_key")
+  @@map("employee_skills")
+}
+
+model pods {
+  id         String      @id(map: "rms_pods_pkey") @default(uuid())
+  name       String      @unique(map: "rms_pods_name_key")
+  lead_id    String      @unique(map: "rms_pods_lead_id_key")
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  deleted_at DateTime?
+  members    employees[] @relation("PodMembers")
+  lead       employees   @relation("PodLead", fields: [lead_id], references: [id], map: "rms_pods_lead_id_fkey")
+
+  @@map("pods")
+}
+
+model accounts {
+  id         String         @id(map: "rms_accounts_pkey") @default(uuid())
+  brand_name String         @unique(map: "rms_accounts_brand_name_key")
+  zoho_id    String?        @unique(map: "rms_accounts_zoho_id_key")
+  industry   String?
+  created_at DateTime       @default(now())
+  updated_at DateTime       @updatedAt
+  projects   rms_projects[]
+
+  @@map("accounts")
+}
+
+model audit_logs {
+  id          String   @id(map: "rms_audit_logs_pkey") @default(uuid())
+  entity_type String
+  entity_id   String
+  action      String
+  changed_by  String
+  old_value   Json?
+  new_value   Json?
+  ip_address  String?
+  user_agent  String?
+  created_at  DateTime @default(now())
+
+  @@index([changed_by], map: "rms_audit_logs_changed_by_idx")
+  @@index([created_at], map: "rms_audit_logs_created_at_idx")
+  @@index([entity_type, entity_id], map: "rms_audit_logs_entity_type_entity_id_idx")
+  @@map("audit_logs")
+}
+
+model webhook_logs {
+  id           String    @id(map: "rms_webhook_logs_pkey") @default(uuid())
+  source       String
+  payload      Json
+  status       String
+  error        String?
+  received_at  DateTime  @default(now())
+  processed_at DateTime?
+
+  @@index([source, status], map: "rms_webhook_logs_source_status_idx")
+  @@map("webhook_logs")
+}
+
+model rms_technologies {
+  id                   String                     @id @default(uuid())
+  name                 String                     @unique
+  project_technologies rms_project_technologies[]
+
+  @@map("rms_technologies")
+}
+
+model rms_projects {
+  id                          String                      @id @default(uuid())
+  account_id                  String
+  deal_name                   String
+  zoho_deal_id                String?                     @unique
+  revenue_cents               BigInt?
+  sow_url                     String?
+  billing_model               BillingModel                @default(TIME_AND_MATERIAL)
+  devx_pillar                 DevxPillar                  @default(AI_OPS)
+  status                      ProjectStatus               @default(UPCOMING)
+  start_date                  DateTime
+  end_date                    DateTime?
+  expected_compute_cost_cents BigInt?
+  project_manager_id          String?
+  growth_consultant_id        String?
+  practice_poc_id             String?
+  created_at                  DateTime                    @default(now())
+  updated_at                  DateTime                    @updatedAt
+  deleted_at                  DateTime?
+  show_in_allocations         Boolean                     @default(true)
+  // Zoho deal metadata
+  product                     String?
+  description                 String?
+  deal_tech_stack             String?
+  deal_type                   String?
+  lead_source                 String?
+  documents_folder            String?
+  pre_closed_resource_alignment String?
+  probability                 Int?
+  expected_revenue_cents      BigInt?
+  total_deal_amount_cents     BigInt?
+  currency                    String?
+  exchange_rate               Float?
+  contact_name                String?
+  zoho_created_time           DateTime?
+  // Sub-practice breakdown
+  sub_practice_1_name         String?
+  sub_practice_1_amount_cents BigInt?
+  sub_practice_1_specialist   String?
+  sub_practice_2_name         String?
+  sub_practice_2_amount_cents BigInt?
+  sub_practice_2_specialist   String?
+  sub_practice_3_name         String?
+  sub_practice_3_amount_cents BigInt?
+  sub_practice_3_specialist   String?
+  sub_practice_4_name         String?
+  sub_practice_4_amount_cents BigInt?
+  sub_practice_4_specialist   String?
+  allocations                 rms_allocations[]
+  pnl_snapshots               rms_pnl_snapshots[]
+  project_compute_costs       rms_project_compute_costs[]
+  technologies                rms_project_technologies[]
+  account                     accounts                    @relation(fields: [account_id], references: [id])
+  growth_consultant           employees?                  @relation("GrowthConsultant", fields: [growth_consultant_id], references: [id])
+  practice_poc                employees?                  @relation("PracticePOC", fields: [practice_poc_id], references: [id])
+  project_manager             employees?                  @relation("ProjectManager", fields: [project_manager_id], references: [id])
+
+  @@index([account_id])
+  @@index([status])
+  @@index([project_manager_id])
+  @@index([status, deleted_at])
+  @@map("rms_projects")
+}
+
+model rms_project_technologies {
+  id            String           @id @default(uuid())
+  project_id    String
+  technology_id String
+  project       rms_projects     @relation(fields: [project_id], references: [id])
+  technology    rms_technologies @relation(fields: [technology_id], references: [id])
+
+  @@unique([project_id, technology_id])
+  @@map("rms_project_technologies")
+}
+
+model rms_sprints {
+  id            String              @id @default(uuid())
+  sprint_number Int
+  year          Int
+  start_date    DateTime
+  end_date      DateTime
+  label         String
+  created_at    DateTime            @default(now())
+  allocations   rms_allocations[]
+  pnl_snapshots rms_pnl_snapshots[]
+
+  @@unique([sprint_number, year])
+  @@index([start_date])
+  @@map("rms_sprints")
+}
+
+model rms_allocations {
+  id                    String       @id @default(uuid())
+  employee_id           String
+  project_id            String
+  sprint_id             String
+  allocation_percentage Int
+  is_bench              Boolean      @default(false)
+  notes                 String?
+  created_by            String
+  updated_by            String?
+  created_at            DateTime     @default(now())
+  updated_at            DateTime     @updatedAt
+  deleted_at            DateTime?
+  employee              employees    @relation(fields: [employee_id], references: [id])
+  project               rms_projects @relation(fields: [project_id], references: [id])
+  sprint                rms_sprints  @relation(fields: [sprint_id], references: [id])
+
+  @@unique([employee_id, project_id, sprint_id])
+  @@index([sprint_id])
+  @@index([employee_id])
+  @@index([project_id])
+  @@index([project_id, sprint_id, deleted_at])
+  @@index([employee_id, sprint_id, deleted_at])
+  @@index([sprint_id, deleted_at])
+  @@map("rms_allocations")
+}
+
+model rms_employee_compute_costs {
+  id               String    @id @default(uuid())
+  employee_id      String
+  month            String
+  total_cost_cents Int
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  employee         employees @relation(fields: [employee_id], references: [id])
+
+  @@unique([employee_id, month])
+  @@map("rms_employee_compute_costs")
+}
+
+model rms_project_compute_costs {
+  id                  String                @id @default(uuid())
+  project_id          String
+  employee_id         String?
+  month               String
+  allocation_type     ComputeAllocationType
+  allocated_percent   Float?
+  lump_sum_cents      Int?
+  computed_cost_cents Int
+  notes               String?
+  created_at          DateTime              @default(now())
+  updated_at          DateTime              @updatedAt
+  project             rms_projects          @relation(fields: [project_id], references: [id])
+
+  @@index([project_id, month])
+  @@map("rms_project_compute_costs")
+}
+
+model rms_pnl_snapshots {
+  id                        String       @id @default(uuid())
+  project_id                String
+  sprint_id                 String
+  revenue_cents             Int?
+  total_employee_cost_cents Int?
+  total_compute_cost_cents  Int?
+  total_cost_cents          Int?
+  gross_margin_cents        Int?
+  is_in_red                 Boolean?
+  is_projected              Boolean
+  computed_at               DateTime     @default(now())
+  project                   rms_projects @relation(fields: [project_id], references: [id])
+  sprint                    rms_sprints  @relation(fields: [sprint_id], references: [id])
+
+  @@unique([project_id, sprint_id])
+  @@index([is_in_red])
+  @@index([sprint_id])
+  @@map("rms_pnl_snapshots")
+}
+
+model rms_invites {
+  id          String       @id @default(uuid())
+  email       String
+  system_role SystemRole   @default(EMPLOYEE)
+  invited_by  String
+  status      InviteStatus @default(PENDING)
+  expires_at  DateTime
+  accepted_at DateTime?
+  revoked_at  DateTime?
+  note        String?
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+
+  @@unique([email, status])
+  @@index([status])
+  @@index([invited_by])
+  @@map("rms_invites")
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  RESIGNED
+  TERMINATED
+}
+
+enum SystemRole {
+  ADMIN
+  POD_LEAD
+  CSM
+  EMPLOYEE
+}
+
+enum ProjectStatus {
+  UPCOMING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum BillingModel {
+  TIME_AND_MATERIAL
+  FIXED_PRICE
+  RETAINER
+  MILESTONE_BASED
+  OUTCOME_BASED
+}
+
+enum DevxPillar {
+  CUSTOMER_INTERACTION
+  MARKETING_AUTOMATION
+  AI_OPS
+  ENTERPRISE_ARCHITECTURE
+}
+
+enum ComputeAllocationType {
+  PRO_RATA
+  CUSTOM
+  LUMP_SUM
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}

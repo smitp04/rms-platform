@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>devx AI Labs — Platform Technical Architecture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+    color: #1a1a2e;
+    background: #fff;
+    line-height: 1.6;
+  }
+
+  /* ── Page layout ── */
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 48px;
+  }
+
+  /* ── Cover ── */
+  .cover {
+    text-align: center;
+    padding: 80px 0 60px;
+    border-bottom: 3px solid #3b82f6;
+    margin-bottom: 48px;
+  }
+  .cover .logo-pill {
+    display: inline-block;
+    background: #3b82f6;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 18px;
+    border-radius: 100px;
+    margin-bottom: 24px;
+  }
+  .cover h1 {
+    font-size: 36px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+  .cover .subtitle {
+    font-size: 15px;
+    color: #64748b;
+    margin-bottom: 32px;
+  }
+  .cover .meta {
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  /* ── Section headers ── */
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 40px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: #3b82f6;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 100px;
+  }
+  h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 20px 0 8px;
+  }
+  h4 {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    margin: 12px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  /* ── Diagram boxes ── */
+  .diagram {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0 24px;
+    font-family: 'SF Mono', 'Courier New', monospace;
+    font-size: 11.5px;
+    line-height: 1.8;
+    color: #334155;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* ── Tool grid ── */
+  .grid {
+    display: grid;
+    gap: 12px;
+    margin: 12px 0 24px;
+  }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .card .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 4px;
+  }
+  .card .card-desc {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.5;
+  }
+
+  /* ── Product cards (tool pillars) ── */
+  .pillar-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .pillar {
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .pillar .pillar-icon { font-size: 22px; margin-bottom: 8px; }
+  .pillar .pillar-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .pillar .pillar-desc { font-size: 10px; opacity: 0.85; line-height: 1.4; }
+  .pillar.rms  { background: #dbeafe; color: #1d4ed8; }
+  .pillar.ems  { background: #d1fae5; color: #065f46; }
+  .pillar.csat { background: #fef9c3; color: #854d0e; }
+  .pillar.crm  { background: #fce7f3; color: #9d174d; }
+
+  /* ── SSO highlight ── */
+  .sso-bar {
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    color: #fff;
+    border-radius: 10px;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .sso-bar .sso-icon { font-size: 28px; }
+  .sso-bar .sso-text .title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .sso-bar .sso-text .desc { font-size: 11px; opacity: 0.85; }
+
+  /* ── Table ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 24px;
+    font-size: 12px;
+  }
+  th {
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 700;
+    text-align: left;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  td {
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+
+  /* ── Tag chips ── */
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 100px;
+    margin: 2px;
+  }
+  .tag-blue  { background: #dbeafe; color: #1d4ed8; }
+  .tag-green { background: #d1fae5; color: #065f46; }
+  .tag-amber { background: #fef3c7; color: #92400e; }
+  .tag-red   { background: #fee2e2; color: #991b1b; }
+  .tag-gray  { background: #f1f5f9; color: #475569; }
+  .tag-violet{ background: #ede9fe; color: #5b21b6; }
+
+  /* ── Phase timeline ── */
+  .timeline {
+    position: relative;
+    margin: 16px 0 24px;
+    padding-left: 24px;
+    border-left: 2px solid #e2e8f0;
+  }
+  .timeline-item {
+    position: relative;
+    margin-bottom: 16px;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -29px;
+    top: 4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3b82f6;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #3b82f6;
+  }
+  .timeline-item.done::before { background: #10b981; box-shadow: 0 0 0 2px #10b981; }
+  .timeline-item .phase-title { font-size: 13px; font-weight: 700; color: #1e293b; }
+  .timeline-item .phase-desc  { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+  /* ── Info callout ── */
+  .callout {
+    border-left: 4px solid #3b82f6;
+    background: #eff6ff;
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 12px 0;
+    font-size: 12px;
+    color: #1e40af;
+    line-height: 1.6;
+  }
+  .callout.green { border-color: #10b981; background: #ecfdf5; color: #065f46; }
+  .callout.amber { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
+
+  /* ── Section separator ── */
+  .sep { border: none; border-top: 1px solid #e2e8f0; margin: 32px 0; }
+
+  /* ── Print ── */
+  @media print {
+    body { font-size: 11px; }
+    .page { padding: 28px 32px; }
+    .cover { padding: 40px 0 30px; }
+    h2 { font-size: 16px; }
+    .diagram { font-size: 10px; }
+    .pillar-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  p { margin-bottom: 8px; color: #334155; }
+  ul { margin: 8px 0 12px 20px; color: #334155; }
+  ul li { margin-bottom: 4px; }
+  strong { color: #1e293b; }
+  code {
+    font-family: 'SF Mono', 'Courier New', monospace;
+    font-size: 11px;
+    background: #f1f5f9;
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: #0369a1;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══════════════════════════════════════════════════════════ COVER ══ -->
+  <div class="cover">
+    <div class="logo-pill">devx AI Labs</div>
+    <h1>Platform Technical Architecture</h1>
+    <div class="subtitle">Internal Tooling Ecosystem — RMS · EMS · CSAT · CRM · Employee Feedback</div>
+    <div class="meta">Version 1.0 &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; February 2026</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ 1. OVERVIEW ══ -->
+  <h2>1. Platform Overview</h2>
+
+  <p>devx AI Labs (150+ employees) is building a unified internal platform across four distinct tools,
+  all sharing a single backend, database, and authentication layer. Each tool is a set of Next.js
+  pages within the same monorepo, operating on its own database namespace.</p>
+
+  <div class="pillar-grid">
+    <div class="pillar rms">
+      <div class="pillar-icon">📊</div>
+      <div class="pillar-name">RMS</div>
+      <div class="pillar-desc">Resource Management System — allocations, PnL, sprint planning</div>
+    </div>
+    <div class="pillar ems">
+      <div class="pillar-icon">👥</div>
+      <div class="pillar-name">EMS</div>
+      <div class="pillar-desc">Employee Management System — skills, salaries, org chart</div>
+    </div>
+    <div class="pillar csat">
+      <div class="pillar-icon">⭐</div>
+      <div class="pillar-name">CSAT</div>
+      <div class="pillar-desc">Client Satisfaction — surveys, NPS, project health scores</div>
+    </div>
+    <div class="pillar crm">
+      <div class="pillar-icon">🔗</div>
+      <div class="pillar-name">CRM Views</div>
+      <div class="pillar-desc">Zoho CRM mirror — deal pipeline, account visibility</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ 2. SSO ══ -->
+  <h2>2. Authentication — Google SSO <span class="badge">Shared Across All Tools</span></h2>
+
+  <div class="sso-bar">
+    <div class="sso-icon">🔐</div>
+    <div class="sso-text">
+      <div class="title">Single Sign-On via Google Workspace (@devxailabs.com)</div>
+      <div class="desc">One NextAuth.js session covers RMS, EMS, CSAT, CRM Views, and Employee Feedback.
+      The session token carries <strong>user.id</strong>, <strong>system_role</strong>, and <strong>pod_id</strong>.
+      RBAC permissions are resolved server-side on every API route.</div>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title">🔑 Provider</div>
+      <div class="card-desc">NextAuth.js v5 with the Google OAuth2 provider. Domain restricted to <code>@devxailabs.com</code>.
+      The <code>hd</code> (hosted domain) parameter blocks external Gmail accounts.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎫 Session Storage</div>
+      <div class="card-desc">JWT strategy. Session verified on every server-side API route via
+      <code>requireSession()</code>. No cookie store dependency — stateless and horizontally scalable.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🛡️ RBAC Roles</div>
+      <div class="card-desc"><strong>ADMIN</strong> (CEO/CTO/CFO) · <strong>POD_LEAD</strong> (team leads) ·
+      <strong>CSM</strong> (client success managers) · <strong>EMPLOYEE</strong> (view-only own data)</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔄 Auto-provisioning</div>
+      <div class="card-desc">New Google Workspace accounts are automatically provisioned as
+      <code>rms_employees</code> records via n8n Google Admin webhook. No manual onboarding required.</div>
+    </div>
+  </div>
+
+  <div class="diagram">
+Browser (Chrome)
+    │  Google OAuth redirect → accounts.google.com
+    │         ↓  authorization_code
+    ↓
+NextAuth.js Callback  (/api/auth/callback/google)
+    │  Verify hd=devxailabs.com
+    │  Lookup/create rms_employees record
+    │  Attach system_role + pod_id to JWT
+    ↓
+Signed JWT (stored in httpOnly cookie)
+    │
+    ├──▶  Next.js Server Components: getServerSession()
+    ├──▶  API Routes: requireSession() → throws 401 if invalid
+    └──▶  Client Components: useSession() via SessionProvider</div>
+
+  <!-- ══════════════════════════════════════════════ 3. TECH STACK ══ -->
+  <h2>3. Technology Stack</h2>
+
+  <table>
+    <tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr>
+    <tr><td><strong>Monorepo</strong></td><td>Turborepo + npm workspaces</td><td>Shared schema, RBAC, types across all tools</td></tr>
+    <tr><td><strong>Frontend</strong></td><td>Next.js 14+ (App Router, TypeScript)</td><td>SSR pages, API routes, server components</td></tr>
+    <tr><td><strong>UI</strong></td><td>Tailwind CSS + shadcn/ui</td><td>Design system, accessible components</td></tr>
+    <tr><td><strong>State</strong></td><td>TanStack Query + Zustand</td><td>Server cache (queries) + local UI state (Gantt drag/copy)</td></tr>
+    <tr><td><strong>Charts</strong></td><td>Recharts</td><td>PnL trends, allocation charts, dashboard KPIs</td></tr>
+    <tr><td><strong>DnD</strong></td><td>dnd-kit</td><td>Drag-and-drop allocation Gantt</td></tr>
+    <tr><td><strong>Database</strong></td><td>PostgreSQL (AWS RDS Multi-AZ)</td><td>Single DB, multiple namespace prefixes</td></tr>
+    <tr><td><strong>ORM</strong></td><td>Prisma v6</td><td>Type-safe DB access, migrations, seeding</td></tr>
+    <tr><td><strong>Auth</strong></td><td>NextAuth.js (Google OAuth2)</td><td>Workspace SSO, JWT sessions, RBAC</td></tr>
+    <tr><td><strong>Cache</strong></td><td>Redis (ElastiCache)</td><td>Session store, API cache (sprint data)</td></tr>
+    <tr><td><strong>Webhooks</strong></td><td>n8n</td><td>Zoho CRM sync, Google Admin auto-provisioning</td></tr>
+    <tr><td><strong>Storage</strong></td><td>AWS S3</td><td>SoW documents, file attachments</td></tr>
+    <tr><td><strong>Hosting</strong></td><td>AWS ECS Fargate</td><td>Container auto-scaling, zero-downtime deploys</td></tr>
+    <tr><td><strong>CI/CD</strong></td><td>GitHub Actions → ECR → ECS</td><td>Automated test, build, deploy pipeline</td></tr>
+    <tr><td><strong>Monitoring</strong></td><td>CloudWatch</td><td>Logs, alarms, metric dashboards</td></tr>
+  </table>
+
+  <!-- ══════════════════════════════════════════════ 4. DB SCHEMA ══ -->
+  <h2>4. Database Architecture — One DB, Multiple Namespaces</h2>
+
+  <p>All tools share a single PostgreSQL database. Tables are namespaced by prefix to allow clean
+  joins across tools (e.g., <code>rms_employees</code> is the canonical employee source shared by all).</p>
+
+  <div class="grid grid-4">
+    <div class="card">
+      <div class="card-title"><span class="tag tag-blue">rms_</span></div>
+      <div class="card-desc">employees, pods, projects, accounts, allocations, sprints, audit_logs, pnl_snapshots, compute_costs</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-green">ems_</span></div>
+      <div class="card-desc">salary_history, leaves, promotions, performance_reviews, documents, skills (extended)</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-amber">csat_</span></div>
+      <div class="card-desc">surveys, responses, nps_scores, health_checks, action_items</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-red">crm_</span></div>
+      <div class="card-desc">zoho_deals, contacts, activities, deal_sync_log (mirror cache of Zoho)</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Key design decisions:</strong><br>
+    • All monetary values stored as <strong>integer cents</strong> — no floating point errors<br>
+    • All PKs use <strong>UUID</strong> — no enumeration risk<br>
+    • All tables carry <code>created_at</code>, <code>updated_at</code>, <code>deleted_at</code> — soft deletes everywhere<br>
+    • <code>rms_employees</code> is the <strong>canonical employee record</strong> used across RMS, EMS, CSAT, and Feedback tools
+  </div>
+
+  <!-- ══════════════════════════════════════════════ 5. REPOS ══ -->
+  <h2>5. Repository Structure</h2>
+
+  <div class="diagram">devx-platform/                     (Turborepo monorepo)
+├── apps/
+│   └── web/                        Next.js 14 App Router
+│       ├── app/
+│       │   ├── (auth)/login/       Google SSO login page
+│       │   ├── (dashboard)/        Protected app shell
+│       │   │   ├── layout.tsx      Sidebar + topbar
+│       │   │   ├── page.tsx        Dashboard overview
+│       │   │   ├── employees/      RMS: Employee directory
+│       │   │   ├── projects/       RMS: Project management
+│       │   │   ├── allocations/    RMS: Gantt board
+│       │   │   ├── pnl/            RMS: P&amp;L overview
+│       │   │   ├── ems/            [FUTURE] EMS pages
+│       │   │   ├── csat/           [FUTURE] CSAT pages
+│       │   │   └── crm/            [FUTURE] CRM views
+│       │   └── api/v1/
+│       │       ├── auth/           NextAuth handlers
+│       │       ├── employees/      Employee CRUD + activity
+│       │       ├── projects/       Project CRUD
+│       │       ├── allocations/    Allocations + bulk + history
+│       │       ├── sprints/        Sprint management
+│       │       ├── pnl/            PnL summary + snapshots
+│       │       ├── dashboard/      KPIs + trend data
+│       │       └── webhooks/       n8n: CRM sync, Google Admin
+│       ├── components/
+│       │   ├── layout/             Sidebar, Topbar
+│       │   ├── employees/          EmployeesClient, ProfileDrawer
+│       │   ├── allocations/        AllocationGantt, Modals
+│       │   ├── projects/           ProjectsClient, DetailDrawer
+│       │   └── pnl/                PnLClient
+│       └── lib/
+│           ├── auth.ts             NextAuth config
+│           ├── prisma.ts           Prisma singleton
+│           └── services/           Business logic layer
+│
+├── packages/
+│   ├── db/                         Prisma schema + migrations
+│   │   ├── prisma/schema.prisma    Canonical schema (all namespaces)
+│   │   └── src/
+│   │       ├── seed.ts             Base seed (functions, roles, sprints)
+│   │       └── seed-demo.ts        Demo data (employees, projects, allocs)
+│   ├── auth/                       RBAC permissions map
+│   ├── types/                      Shared TypeScript types
+│   └── config/                     Env schema (Zod), constants
+│
+├── turbo.json
+└── docker-compose.yml              Local dev: Postgres + Redis</div>
+
+  <!-- ══════════════════════════════════════════════ 6. AWS INFRA ══ -->
+  <h2>6. AWS Infrastructure</h2>
+
+  <div class="diagram">
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Route 53 (DNS)                                                           │
+│       ↓                                                                   │
+│  CloudFront CDN  ──────────▶  S3 (SoW docs, static assets)              │
+│       ↓                                                                   │
+│  ALB (Application Load Balancer)                                         │
+│       ↓                                                                   │
+│  ┌────────────────────────────────────────────────┐                      │
+│  │  ECS Fargate Cluster                            │                      │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐      │                      │
+│  │  │ Task 1   │  │ Task 2   │  │ Task N   │      │                      │
+│  │  │ Next.js  │  │ Next.js  │  │ Next.js  │      │  (auto-scale 2→6)  │
+│  │  └──────────┘  └──────────┘  └──────────┘      │                      │
+│  └────────────────────────────────────────────────┘                      │
+│       │                │                │                                 │
+│       ↓                ↓                ↓                                 │
+│  ┌──────────┐  ┌──────────────┐  ┌──────────────┐                       │
+│  │ RDS      │  │ ElastiCache  │  │ Secrets Mgr  │                       │
+│  │ Postgres │  │ Redis        │  │ (creds, keys)│                       │
+│  │ Multi-AZ │  │ (sessions +  │  └──────────────┘                       │
+│  └──────────┘  │  cache)      │                                          │
+│                └──────────────┘                                          │
+│                                                                           │
+│  ECR (Docker Images)  ◀── GitHub Actions (CI/CD)                        │
+│  CloudWatch (Logs + Alarms)                                              │
+│  n8n (Webhook processor — Zoho CRM, Google Admin)                        │
+└──────────────────────────────────────────────────────────────────────────┘</div>
+
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card-title">🗄️ RDS PostgreSQL</div>
+      <div class="card-desc">Multi-AZ deployment. Automated backups (7-day retention). One database, namespaced tables for all tools. Connection pooling via Prisma connection pool.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">⚡ ElastiCache Redis</div>
+      <div class="card-desc">Session token cache. Sprint data caching. TanStack Query also caches aggressively on the client, reducing server round-trips.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🚀 ECS Fargate</div>
+      <div class="card-desc">Serverless containers — no EC2 management. Auto-scales from 2 to 6 tasks based on CPU/memory. Rolling deploys from GitHub Actions pipeline.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ 7. DATA FLOW ══ -->
+  <h2>7. Data Flow &amp; Webhooks</h2>
+
+  <div class="diagram">
+Zoho CRM (Deal Closed Won)
+    │
+    ↓  HTTP POST (n8n workflow)
+n8n Webhook Processor
+    │  Validates deal data + maps fields
+    │  X-Webhook-Secret header auth
+    ↓
+POST /api/v1/webhooks/crm
+    │  Creates rms_accounts + rms_projects
+    │  Writes rms_webhook_logs
+    ↓
+RMS Platform (project visible immediately)
+
+──────────────────────────────────────────
+
+Google Workspace (New Employee Added)
+    │
+    ↓  HTTP POST (n8n workflow)
+POST /api/v1/webhooks/google-admin
+    │  Creates rms_employees (status: ACTIVE)
+    │  Sets function_id, role_id from payload
+    │  Logs to rms_webhook_logs
+    ↓
+Employee can SSO immediately on first login</div>
+
+  <!-- ══════════════════════════════════════════════ 8. RMS DETAIL ══ -->
+  <h2>8. RMS — Resource Management System <span class="badge">Phase 1–5 Complete</span></h2>
+
+  <h3>Core Modules</h3>
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card-title">📅 Allocation Gantt</div>
+      <div class="card-desc">Interactive sprint board. Drag-and-drop (dnd-kit). Per-sprint allocation percentages. 100% cap validation. Bulk copy across sprint ranges. Audit trail per cell.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">💰 PnL Engine</div>
+      <div class="card-desc">Per-project profitability. Revenue vs. employee cost per sprint. Gross margin %. Red-flag detection. Revenue gated behind ADMIN role. Cached snapshots.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏃 Sprint Engine</div>
+      <div class="card-desc">2-week bi-weekly sprints. Auto-generated for full year. Allocations keyed to <code>sprint_id</code>, not date ranges — supports per-sprint % changes.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 Audit Logs</div>
+      <div class="card-desc">Service-layer writes on every allocation create/update/delete. Stores full JSON snapshots (old + new state). Employee activity drawer shows history per person.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏠 Pods</div>
+      <div class="card-desc">Team groupings with a designated lead. POD_LEAD role scopes Gantt read/write access to their pod members only. Editable by ADMIN.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 Dashboard</div>
+      <div class="card-desc">KPIs: active projects, avg allocation (last 6 sprints), available employees (>20% bandwidth), projects in red. Trend chart. Clickable cards navigate to filtered views.</div>
+    </div>
+  </div>
+
+  <h3>RBAC Matrix</h3>
+  <table>
+    <tr><th>Permission</th><th>ADMIN</th><th>POD_LEAD</th><th>CSM</th><th>EMPLOYEE</th></tr>
+    <tr><td>View all allocations</td><td>✅</td><td>Pod only</td><td>✅</td><td>Own only</td></tr>
+    <tr><td>Edit past sprint allocations</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+    <tr><td>Edit current/future sprints</td><td>✅</td><td>✅ Pod</td><td>✅</td><td>❌</td></tr>
+    <tr><td>View project revenue / margin</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+    <tr><td>Create/edit projects</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+    <tr><td>Create/edit employees</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+    <tr><td>View audit logs</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+  </table>
+
+  <!-- ══════════════════════════════════════════════ 9. EMS ══ -->
+  <h2>9. EMS — Employee Management System <span class="badge">Future Phase</span></h2>
+
+  <p>EMS extends <code>rms_employees</code> as the canonical employee record. All EMS tables use the
+  <code>ems_</code> prefix and foreign-key into <code>rms_employees.id</code>.</p>
+
+  <h3>Key Tables</h3>
+  <div class="diagram">ems_salary_history        (employee_id, effective_date, ctc_cents, reason, approved_by)
+ems_leaves                (employee_id, leave_type, from_date, to_date, status)
+ems_promotions            (employee_id, old_role_id, new_role_id, effective_date, notes)
+ems_performance_reviews   (employee_id, period, rating, reviewer_id, summary)
+ems_documents             (employee_id, type [offer/appraisal/nda], s3_key, uploaded_at)
+ems_skills                (employee_id, skill_id, level [1-5])    ← extends rms_skills</div>
+
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card-title">💼 Salary &amp; Payroll</div>
+      <div class="card-desc">Salary history with effective dates. CTC stored as cents (integer). Syncs to <code>rms_employees.salary_ctc_cents</code> for PnL cost calculations.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎯 Skills &amp; Matching</div>
+      <div class="card-desc">Skill proficiency (1–5 levels). Searchable via <code>GET /api/v1/ems/employees?skill=AI&amp;min_level=3</code>. Enables smart resource allocation suggestions.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">📁 Document Vault</div>
+      <div class="card-desc">Signed URLs to S3 for offer letters, appraisals, NDAs. Accessible via ADMIN and the employee themselves. Enforced by Prisma + S3 IAM policies.</div>
+    </div>
+  </div>
+
+  <div class="callout green">
+    <strong>SSO Note:</strong> EMS uses the same Google SSO session. An employee accesses their own
+    EMS profile at <code>/ems/me</code>. HR and ADMIN can access all profiles at <code>/ems/employees</code>.
+    No separate login — one session, all tools.
+  </div>
+
+  <!-- ══════════════════════════════════════════════ 10. CSAT ══ -->
+  <h2>10. CSAT — Client Satisfaction <span class="badge">Future Phase</span></h2>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title">📬 Survey Delivery</div>
+      <div class="card-desc">NPS / CSAT surveys triggered by sprint completion or project milestones (via n8n). Delivered to client contacts via email. Responses stored in <code>csat_responses</code>.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">📈 Project Health Scores</div>
+      <div class="card-desc">Computed score per project per sprint from survey responses. Displayed on the RMS project detail drawer. Alerts on health score drop below threshold.</div>
+    </div>
+  </div>
+
+  <h3>Key Tables</h3>
+  <div class="diagram">csat_surveys         (project_id, trigger_type [sprint_end/milestone], sent_at, status)
+csat_responses       (survey_id, respondent_email, nps_score, rating, comment, submitted_at)
+csat_health_checks   (project_id, sprint_id, computed_score, is_at_risk)
+csat_action_items    (health_check_id, description, owner_id, due_date, status)</div>
+
+  <div class="callout green">
+    <strong>SSO Note:</strong> Internal CSAT dashboards (<code>/csat</code>) use the shared Google SSO
+    session. External client respondents receive a public survey link — no SSO required.
+    Response collection is anonymous by default.
+  </div>
+
+  <!-- ══════════════════════════════════════════════ 11. CRM ══ -->
+  <h2>11. CRM Views — Zoho Mirror <span class="badge">Future Phase</span></h2>
+
+  <p>Rather than rebuilding a CRM, devx reads Zoho CRM data via n8n webhooks + scheduled syncs,
+  stores a local cache in <code>crm_</code> tables, and surfaces read-only views inside the platform.</p>
+
+  <div class="diagram">Zoho CRM  ──── n8n Webhook (Closed Won) ──▶  POST /api/v1/webhooks/crm
+                                                    │
+                                              Creates rms_projects + rms_accounts
+                                              Caches in crm_zoho_deals
+
+Zoho CRM  ──── n8n Scheduled Sync (nightly) ──▶  POST /api/v1/webhooks/crm/sync
+                                                    │
+                                              Updates deal stages, contact info
+                                              Marks stale deals as CANCELLED</div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title">🔄 Bi-directional Sync</div>
+      <div class="card-desc">Webhook for instant Closed Won trigger. Nightly n8n job for deal stage updates (e.g., Active → On Hold if Zoho changes). RMS is the downstream consumer, Zoho is the source of truth for deals.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">👁️ CRM View Pages</div>
+      <div class="card-desc">Read-only pipeline view at <code>/crm</code>. Shows deal stage, value, contact. Links through to the RMS project when a deal is Closed Won. No write-back to Zoho from RMS.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ 12. FEEDBACK ══ -->
+  <h2>12. Employee Feedback Ecosystem <span class="badge">Future Phase</span></h2>
+
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card-title">🔄 360° Reviews</div>
+      <div class="card-desc">Peer reviews, upward feedback, and self-assessments per review cycle. Stored in <code>feedback_reviews</code>. Aggregated into EMS performance records.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎯 Goal Tracking</div>
+      <div class="card-desc">OKRs per employee per quarter. <code>feedback_goals</code> table. Manager can set, review, and close goals. Linked to performance review cycles.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎖️ Recognition</div>
+      <div class="card-desc">Peer shoutouts and kudos. <code>feedback_recognition</code> table. Surfaced on employee profiles. Optional Slack notification via n8n workflow.</div>
+    </div>
+  </div>
+
+  <div class="callout green">
+    <strong>SSO Note:</strong> All feedback flows through the same Google SSO session.
+    Employees submit peer reviews at <code>/feedback</code>. Anonymity is enforced at the API layer —
+    feedback is aggregated before managers see it. HR and ADMIN see individual responses.
+  </div>
+
+  <!-- ══════════════════════════════════════════════ 13. PHASES ══ -->
+  <h2>13. Implementation Phases</h2>
+
+  <div class="timeline">
+    <div class="timeline-item done">
+      <div class="phase-title">Phase 0 — Foundation ✅</div>
+      <div class="phase-desc">Turborepo scaffold · Prisma schema · NextAuth Google SSO · Docker dev env · Sprint seeding · Full UI shell deployed</div>
+    </div>
+    <div class="timeline-item done">
+      <div class="phase-title">Phase 1 — Employees ✅</div>
+      <div class="phase-desc">Employee CRUD · POD management · Google Admin webhook auto-provisioning · Employee directory tab with allocation overview</div>
+    </div>
+    <div class="timeline-item done">
+      <div class="phase-title">Phase 2 — Projects ✅</div>
+      <div class="phase-desc">Accounts + Projects CRUD · Zoho webhook · Projects tab with RBAC revenue gating · Bulk CSV import</div>
+    </div>
+    <div class="timeline-item done">
+      <div class="phase-title">Phase 3 — Allocation Gantt ✅</div>
+      <div class="phase-desc">Sprint allocation engine · 100% cap validation · dnd-kit drag-and-drop · Copy-paste bulk · Allocation history audit drawer</div>
+    </div>
+    <div class="timeline-item done">
+      <div class="phase-title">Phase 4 — PnL ✅</div>
+      <div class="phase-desc">PnL summary API · Per-project cost engine · Gross margin · Red-flag detection · Expandable employee cost breakdown · Admin-gated revenue columns</div>
+    </div>
+    <div class="timeline-item done">
+      <div class="phase-title">Phase 5 — Dashboard ✅</div>
+      <div class="phase-desc">KPI cards · Avg allocation across last 6 sprints · Available employees (>20% bandwidth) · Projects in red · Clickable navigation to filtered views</div>
+    </div>
+    <div class="timeline-item">
+      <div class="phase-title">Phase 6 — EMS Foundation</div>
+      <div class="phase-desc">ems_ tables · Salary history · Skill management · Leave tracking · Employee self-service portal</div>
+    </div>
+    <div class="timeline-item">
+      <div class="phase-title">Phase 7 — CSAT</div>
+      <div class="phase-desc">Survey delivery · NPS scoring · Project health checks · CSAT dashboard</div>
+    </div>
+    <div class="timeline-item">
+      <div class="phase-title">Phase 8 — CRM Views + Feedback</div>
+      <div class="phase-desc">Zoho deal pipeline view · 360° reviews · Goals · Recognition system</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ 14. API SUMMARY ══ -->
+  <h2>14. API Surface Summary</h2>
+
+  <table>
+    <tr><th>Domain</th><th>Key Endpoints</th><th>Auth</th></tr>
+    <tr><td>Auth</td><td><code>GET /api/auth/session</code> · <code>POST /api/auth/signin</code></td><td>Public</td></tr>
+    <tr><td>Employees</td><td><code>GET/POST /api/v1/employees</code> · <code>PATCH /api/v1/employees/:id</code> · <code>GET /api/v1/employees/:id/activity</code></td><td>ADMIN write; all read</td></tr>
+    <tr><td>Projects</td><td><code>GET/POST /api/v1/projects</code> · <code>GET /api/v1/projects/:id</code></td><td>ADMIN write; revenue gated</td></tr>
+    <tr><td>Sprints</td><td><code>GET /api/v1/sprints</code> · <code>GET /api/v1/sprints/current</code></td><td>All</td></tr>
+    <tr><td>Allocations</td><td><code>GET /api/v1/allocations/gantt</code> · <code>POST /api/v1/allocations/bulk</code> · <code>POST /api/v1/allocations/copy</code></td><td>Role-gated by sprint/pod</td></tr>
+    <tr><td>PnL</td><td><code>GET /api/v1/pnl/summary</code> · <code>GET /api/v1/pnl/:projectId</code></td><td>Revenue: ADMIN only</td></tr>
+    <tr><td>Dashboard</td><td><code>GET /api/v1/dashboard</code></td><td>All (filtered by role)</td></tr>
+    <tr><td>Webhooks</td><td><code>POST /api/v1/webhooks/crm</code> · <code>POST /api/v1/webhooks/google-admin</code></td><td>X-Webhook-Secret header</td></tr>
+  </table>
+
+  <hr class="sep">
+  <div style="text-align:center; color:#94a3b8; font-size:11px; padding-bottom:24px;">
+    devx AI Labs — Confidential &nbsp;·&nbsp; Platform Architecture v1.0 &nbsp;·&nbsp; February 2026
+  </div>
+
+</div>
+</body>
+</html>

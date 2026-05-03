@@ -1,0 +1,5 @@
+{
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["bom1"]
+}

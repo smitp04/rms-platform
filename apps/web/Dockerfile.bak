@@ -1,0 +1,81 @@
+# ── Stage 1: deps ─────────────────────────────────────────────────────────────
+FROM node:20-alpine AS deps
+RUN apk add --no-cache libc6-compat openssl
+WORKDIR /app
+
+# Copy root workspace files
+COPY package.json package-lock.json turbo.json ./
+COPY packages/db/package.json ./packages/db/
+COPY packages/auth/package.json ./packages/auth/
+COPY packages/types/package.json ./packages/types/
+COPY packages/config/package.json ./packages/config/
+COPY apps/web/package.json ./apps/web/
+
+RUN npm ci
+
+# ── Stage 2: builder ──────────────────────────────────────────────────────────
+# cache-bust: v6
+FROM node:20-alpine AS builder
+RUN apk add --no-cache libc6-compat openssl
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy packages source first (explicit layers so cache invalidates on change)
+COPY packages/types/src ./packages/types/src
+COPY packages/auth/src ./packages/auth/src
+COPY packages/config/src ./packages/config/src
+COPY packages/db/src ./packages/db/src
+COPY packages/db/prisma ./packages/db/prisma
+
+# Copy the rest of the repo
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate --schema=packages/db/prisma/schema.prisma
+
+# Dummy build-time env vars (real values injected at runtime)
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+ENV NEXTAUTH_URL=http://localhost:3000
+ENV NEXTAUTH_SECRET=build-time-placeholder-secret-32chars00
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+ENV GOOGLE_CLIENT_ID=build-placeholder
+ENV GOOGLE_CLIENT_SECRET=build-placeholder
+ENV GOOGLE_DOMAIN=devxlabs.ai
+
+# Build Next.js directly (avoids turbo filter issues in CI)
+RUN cd apps/web && npx next build
+
+# ── Stage 3: runner ───────────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+RUN apk add --no-cache openssl
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy standalone build
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder /app/apps/web/public ./apps/web/public
+
+# Copy Prisma generated client + schema (needed at runtime)
+COPY --from=builder /app/packages/db/generated ./packages/db/generated
+COPY --from=builder /app/packages/db/prisma ./packages/db/prisma
+
+# Copy node_modules for prisma CLI (needed for migrate deploy at runtime)
+COPY --from=builder /app/node_modules ./node_modules
+
+# Fix permissions so nextjs user can read all files
+RUN chown -R nextjs:nodejs /app
+
+USER nextjs
+
+EXPOSE 3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "apps/web/server.js"]

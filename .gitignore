@@ -7,3 +7,4 @@ dist/
 build/
 *.tsbuildinfo
 .DS_Store
+packages/db/generated/
