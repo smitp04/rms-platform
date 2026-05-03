@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth ───────────────────────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("auth_accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth_sessions")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  employee      Employee?
+
+  @@map("auth_users")
+}
+
+// ─── RMS Core ────────────────────────────────────────────────────────────────
+
+enum SystemRole {
+  ADMIN
+  POD_LEAD
+  CSM
+  EMPLOYEE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+}
+
+model Pod {
+  id         String     @id @default(uuid())
+  name       String
+  leadId     String?
+  lead       Employee?  @relation("PodLead", fields: [leadId], references: [id])
+  employees  Employee[] @relation("PodMembers")
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@map("rms_pods")
+}
+
+model Employee {
+  id             String         @id @default(uuid())
+  userId         String?        @unique
+  user           User?          @relation(fields: [userId], references: [id])
+  name           String
+  email          String         @unique
+  role           String
+  systemRole     SystemRole     @default(EMPLOYEE)
+  status         EmployeeStatus @default(ACTIVE)
+  podId          String?
+  pod            Pod?           @relation("PodMembers", fields: [podId], references: [id])
+  podLead        Pod[]          @relation("PodLead")
+  salaryCents    Int            @default(0)
+  joinedAt       DateTime       @default(now())
+  allocations    Allocation[]
+  auditLogs      AuditLog[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+
+  @@map("rms_employees")
+}
+
+model Account_RMS {
+  id        String    @id @default(uuid())
+  name      String
+  zohoId    String?   @unique
+  projects  Project[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("rms_accounts")
+}
+
+model Project {
+  id             String       @id @default(uuid())
+  name           String
+  accountId      String
+  account        Account_RMS  @relation(fields: [accountId], references: [id])
+  revenuePerSprint Int        @default(0)
+  status         String       @default("ACTIVE")
+  allocations    Allocation[]
+  pnlSnapshots   PnLSnapshot[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  @@map("rms_projects")
+}
+
+model Sprint {
+  id          String       @id @default(uuid())
+  name        String
+  startDate   DateTime
+  endDate     DateTime
+  allocations Allocation[]
+  createdAt   DateTime     @default(now())
+
+  @@map("rms_sprints")
+}
+
+model Allocation {
+  id          String    @id @default(uuid())
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id])
+  sprintId    String
+  sprint      Sprint    @relation(fields: [sprintId], references: [id])
+  percentage  Int
+  auditLogs   AuditLog[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([employeeId, projectId, sprintId])
+  @@map("rms_allocations")
+}
+
+model PnLSnapshot {
+  id              String   @id @default(uuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id])
+  sprintId        String
+  revenueCents    Int
+  costCents       Int
+  grossMarginPct  Float
+  createdAt       DateTime @default(now())
+
+  @@map("rms_pnl_snapshots")
+}
+
+model AuditLog {
+  id          String    @id @default(uuid())
+  action      String
+  entityType  String
+  entityId    String
+  performedBy String
+  employee    Employee  @relation(fields: [performedBy], references: [id])
+  allocationId String?
+  allocation  Allocation? @relation(fields: [allocationId], references: [id])
+  oldState    Json?
+  newState    Json?
+  createdAt   DateTime  @default(now())
+
+  @@map("rms_audit_logs")
+}
